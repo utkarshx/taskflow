@@ -1,0 +1,828 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Workflow Import Schema - Group Based",
+  "description": "JSON schema for importing workflows using hierarchical group structure",
+  "type": "object",
+  "required": ["workflow", "structure"],
+  "properties": {
+    "workflow": {
+      "type": "object",
+      "description": "Workflow metadata and configuration",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Workflow name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Workflow description",
+          "maxLength": 500
+        },
+        "version": {
+          "type": "string",
+          "description": "Workflow version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "author": {
+          "type": "string",
+          "description": "Workflow author",
+          "maxLength": 100
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Workflow creation date"
+        },
+        "modified": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification date"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Workflow tags",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "maxItems": 10
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "description": "Hierarchical workflow structure",
+      "required": ["groups"],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "description": "Array of workflow groups",
+          "items": {
+            "$ref": "#/definitions/group"
+          },
+          "minItems": 1
+        },
+        "connections": {
+          "type": "array",
+          "description": "Connections between groups and external nodes",
+          "items": {
+            "$ref": "#/definitions/groupConnection"
+          }
+        }
+      }
+    },
+    "externalNodes": {
+      "type": "object",
+      "description": "External nodes that can be referenced by groups",
+      "properties": {
+        "todoLists": {
+          "type": "array",
+          "description": "Todo list definitions",
+          "items": {
+            "$ref": "#/definitions/todoListDefinition"
+          }
+        },
+        "messageBuses": {
+          "type": "array",
+          "description": "Message bus definitions",
+          "items": {
+            "$ref": "#/definitions/messageBusDefinition"
+          }
+        }
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "description": "Canvas viewport configuration",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "Viewport X position"
+        },
+        "y": {
+          "type": "number",
+          "description": "Viewport Y position"
+        },
+        "zoom": {
+          "type": "number",
+          "description": "Zoom level",
+          "minimum": 0.1,
+          "maximum": 2.0
+        }
+      }
+    }
+  },
+  "definitions": {
+    "group": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique group identifier",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Group type",
+          "enum": [
+            "task",
+            "parallel",
+            "sequential",
+            "independent",
+            "merge",
+            "loop",
+            "ifcondition",
+            "messagebus"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "description": "Group display name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "position": {
+          "type": "object",
+          "description": "Group position on canvas",
+          "required": ["x", "y"],
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X coordinate"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y coordinate"
+            }
+          }
+        },
+        "description": {
+          "type": "string",
+          "description": "Group description",
+          "maxLength": 500
+        },
+        "tasks": {
+          "type": "array",
+          "description": "Tasks within this group",
+          "items": {
+            "$ref": "#/definitions/task"
+          }
+        },
+        "subgroups": {
+          "type": "array",
+          "description": "Nested subgroups",
+          "items": {
+            "$ref": "#/definitions/group"
+          }
+        },
+        "config": {
+          "type": "object",
+          "description": "Group-specific configuration",
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "task" }
+                }
+              },
+              "then": { "$ref": "#/definitions/taskConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "parallel" }
+                }
+              },
+              "then": { "$ref": "#/definitions/parallelConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "sequential" }
+                }
+              },
+              "then": { "$ref": "#/definitions/sequentialConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "independent" }
+                }
+              },
+              "then": { "$ref": "#/definitions/independentConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "merge" }
+                }
+              },
+              "then": { "$ref": "#/definitions/mergeConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "loop" }
+                }
+              },
+              "then": { "$ref": "#/definitions/loopConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "ifcondition" }
+                }
+              },
+              "then": { "$ref": "#/definitions/ifConditionConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "messagebus" }
+                }
+              },
+              "then": { "$ref": "#/definitions/messageBusConfig" }
+            }
+          ]
+        },
+        "inputs": {
+          "type": "array",
+          "description": "Input connections to this group",
+          "items": {
+            "$ref": "#/definitions/connection"
+          },
+          "maxItems": 5
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Output connections from this group",
+          "items": {
+            "$ref": "#/definitions/connection"
+          },
+          "maxItems": 5
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique task identifier",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Task name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description",
+          "maxLength": 500
+        },
+        "priority": {
+          "type": "string",
+          "description": "Task priority",
+          "enum": ["low", "medium", "high"],
+          "default": "medium"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Estimated duration in hours",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "assignee": {
+          "type": "string",
+          "description": "Task assignee",
+          "maxLength": 100
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "Task dependencies within the group",
+          "items": {
+            "type": "string"
+          }
+        },
+        "condition": {
+          "type": "string",
+          "description": "Condition for executing this task",
+          "maxLength": 500
+        }
+      }
+    },
+    "connection": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Source group or task ID"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target group or task ID"
+        },
+        "type": {
+          "type": "string",
+          "description": "Connection type",
+          "enum": ["success", "failure", "always", "conditional"],
+          "default": "always"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Condition for this connection (if type is conditional)",
+          "maxLength": 500
+        },
+        "label": {
+          "type": "string",
+          "description": "Connection label",
+          "maxLength": 50
+        }
+      }
+    },
+    "groupConnection": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Source group ID"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target group ID"
+        },
+        "fromOutput": {
+          "type": "string",
+          "description": "Source output type",
+          "enum": ["default", "success", "failure", "true", "false", "completed"]
+        },
+        "toInput": {
+          "type": "string",
+          "description": "Target input type",
+          "enum": ["default", "trigger", "todolist", "task", "input"]
+        }
+      }
+    },
+    "todoListDefinition": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Todo list identifier",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Todo list name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "items": {
+          "type": "array",
+          "description": "Todo items",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Item ID"
+              },
+              "text": {
+                "type": "string",
+                "description": "Todo item text",
+                "maxLength": 500
+              },
+              "completed": {
+                "type": "boolean",
+                "description": "Whether item is completed",
+                "default": false
+              },
+              "priority": {
+                "type": "string",
+                "description": "Item priority",
+                "enum": ["low", "medium", "high"],
+                "default": "medium"
+              }
+            }
+          }
+        }
+      }
+    },
+    "messageBusDefinition": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Message bus identifier",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Message bus name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "mode": {
+          "type": "string",
+          "description": "Message bus mode",
+          "enum": ["sender", "receiver"],
+          "default": "sender"
+        },
+        "messageTypes": {
+          "type": "array",
+          "description": "Supported message types",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          }
+        }
+      }
+    },
+    "taskConfig": {
+      "type": "object",
+      "properties": {
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "default": "medium"
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "assignee": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "parallelConfig": {
+      "type": "object",
+      "properties": {
+        "waitAll": {
+          "type": "boolean",
+          "description": "Wait for all tasks to complete",
+          "default": true
+        },
+        "maxConcurrency": {
+          "type": "integer",
+          "description": "Maximum concurrent tasks",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      }
+    },
+    "sequentialConfig": {
+      "type": "object",
+      "properties": {
+        "continueOnError": {
+          "type": "boolean",
+          "description": "Continue executing next task on error",
+          "default": false
+        },
+        "retryPolicy": {
+          "type": "object",
+          "properties": {
+            "maxRetries": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 0
+            },
+            "retryDelay": {
+              "type": "number",
+              "description": "Retry delay in seconds",
+              "minimum": 0,
+              "maximum": 3600,
+              "default": 5
+            }
+          }
+        }
+      }
+    },
+    "independentConfig": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds",
+          "minimum": 1,
+          "maximum": 86400
+        }
+      }
+    },
+    "mergeConfig": {
+      "type": "object",
+      "properties": {
+        "waitAll": {
+          "type": "boolean",
+          "description": "Wait for all inputs before proceeding",
+          "default": true
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds",
+          "minimum": 1,
+          "maximum": 3600
+        }
+      }
+    },
+    "loopConfig": {
+      "type": "object",
+      "properties": {
+        "todoListId": {
+          "type": "string",
+          "description": "ID of todo list to iterate over"
+        },
+        "maxIterations": {
+          "type": "integer",
+          "description": "Maximum number of iterations",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "stopOnFailure": {
+          "type": "boolean",
+          "description": "Stop loop on task failure",
+          "default": true
+        }
+      }
+    },
+    "ifConditionConfig": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "type": "string",
+          "description": "Condition prompt starting with 'Proceed only if the condition is met: '",
+          "minLength": 10,
+          "maxLength": 1000
+        },
+        "truePath": {
+          "type": "string",
+          "description": "Group ID to execute when condition is true"
+        },
+        "falsePath": {
+          "type": "string",
+          "description": "Group ID to execute when condition is false"
+        }
+      }
+    },
+    "messageBusConfig": {
+      "type": "object",
+      "properties": {
+        "messageBusId": {
+          "type": "string",
+          "description": "ID of message bus definition"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["sender", "receiver"],
+          "default": "sender"
+        },
+        "messageType": {
+          "type": "string",
+          "description": "Type of message to send or receive",
+          "maxLength": 50
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "workflow": {
+        "name": "E-commerce Order Processing",
+        "description": "Complete workflow for processing e-commerce orders with validation, payment, and notification",
+        "version": "1.0.0",
+        "author": "Workflow Team",
+        "created": "2024-01-15T10:00:00Z",
+        "modified": "2024-01-15T10:00:00Z",
+        "tags": ["ecommerce", "order-processing", "automation"]
+      },
+      "structure": {
+        "groups": [
+          {
+            "id": "start-group",
+            "type": "task",
+            "name": "Order Intake",
+            "position": { "x": 100, "y": 100 },
+            "description": "Initial order processing and validation",
+            "tasks": [
+              {
+                "id": "validate-order",
+                "name": "Validate Order Data",
+                "description": "Check all required fields and data format",
+                "priority": "high",
+                "duration": 0.5
+              },
+              {
+                "id": "check-inventory",
+                "name": "Check Inventory",
+                "description": "Verify product availability",
+                "priority": "high",
+                "duration": 1,
+                "dependencies": ["validate-order"]
+              }
+            ],
+            "outputs": [
+              {
+                "from": "start-group",
+                "to": "payment-group"
+              }
+            ]
+          },
+          {
+            "id": "payment-group",
+            "type": "ifcondition",
+            "name": "Payment Processing",
+            "position": { "x": 400, "y": 100 },
+            "description": "Process payment based on order validation",
+            "config": {
+              "condition": "Proceed only if the condition is met: Order is valid and inventory is available",
+              "truePath": "process-payment",
+              "falsePath": "notification-group"
+            }
+          },
+          {
+            "id": "process-payment",
+            "type": "parallel",
+            "name": "Payment Execution",
+            "position": { "x": 700, "y": 100 },
+            "description": "Execute payment processing in parallel",
+            "config": {
+              "waitAll": true,
+              "maxConcurrency": 3
+            },
+            "tasks": [
+              {
+                "id": "charge-card",
+                "name": "Charge Credit Card",
+                "description": "Process credit card payment",
+                "priority": "high",
+                "duration": 2
+              },
+              {
+                "id": "update-inventory",
+                "name": "Update Inventory",
+                "description": "Reserve products and update stock",
+                "priority": "medium",
+                "duration": 1
+              },
+              {
+                "id": "create-order-record",
+                "name": "Create Order Record",
+                "description": "Generate order record in database",
+                "priority": "medium",
+                "duration": 0.5
+              }
+            ],
+            "outputs": [
+              {
+                "from": "process-payment",
+                "to": "fulfillment-group"
+              }
+            ]
+          },
+          {
+            "id": "fulfillment-group",
+            "type": "loop",
+            "name": "Order Fulfillment",
+            "position": { "x": 1000, "y": 100 },
+            "description": "Process order fulfillment for each item",
+            "config": {
+              "todoListId": "order-items",
+              "maxIterations": 50,
+              "stopOnFailure": true
+            },
+            "tasks": [
+              {
+                "id": "pick-items",
+                "name": "Pick Items",
+                "description": "Pick items from warehouse",
+                "priority": "medium",
+                "duration": 1
+              },
+              {
+                "id": "package-items",
+                "name": "Package Items",
+                "description": "Package items for shipping",
+                "priority": "medium",
+                "duration": 0.5,
+                "dependencies": ["pick-items"]
+              },
+              {
+                "id": "generate-shipping",
+                "name": "Generate Shipping Label",
+                "description": "Create shipping label",
+                "priority": "low",
+                "duration": 0.2,
+                "dependencies": ["package-items"]
+              }
+            ],
+            "outputs": [
+              {
+                "from": "fulfillment-group",
+                "to": "notification-group"
+              }
+            ]
+          },
+          {
+            "id": "notification-group",
+            "type": "messagebus",
+            "name": "Send Notifications",
+            "position": { "x": 1300, "y": 100 },
+            "description": "Send notifications to customer and internal systems",
+            "config": {
+              "messageBusId": "notification-service",
+              "mode": "sender",
+              "messageType": "order-update"
+            },
+            "tasks": [
+              {
+                "id": "send-email",
+                "name": "Send Email Confirmation",
+                "description": "Send order confirmation email",
+                "priority": "high",
+                "duration": 0.5
+              },
+              {
+                "id": "send-sms",
+                "name": "Send SMS Notification",
+                "description": "Send SMS notification",
+                "priority": "medium",
+                "duration": 0.2
+              }
+            ]
+          }
+        ],
+        "connections": [
+          {
+            "from": "start-group",
+            "to": "payment-group",
+            "fromOutput": "default",
+            "toInput": "input"
+          },
+          {
+            "from": "process-payment",
+            "to": "fulfillment-group",
+            "fromOutput": "default",
+            "toInput": "input"
+          },
+          {
+            "from": "fulfillment-group",
+            "to": "notification-group",
+            "fromOutput": "completed",
+            "toInput": "input"
+          }
+        ]
+      },
+      "externalNodes": {
+        "todoLists": [
+          {
+            "id": "order-items",
+            "name": "Order Items",
+            "items": [
+              {
+                "id": "item-1",
+                "text": "Process product SKU-12345",
+                "completed": false,
+                "priority": "high"
+              },
+              {
+                "id": "item-2",
+                "text": "Process product SKU-67890",
+                "completed": false,
+                "priority": "medium"
+              }
+            ]
+          }
+        ],
+        "messageBuses": [
+          {
+            "id": "notification-service",
+            "name": "Notification Service",
+            "mode": "sender",
+            "messageTypes": ["order-update", "payment-failed", "shipping-update"]
+          }
+        ]
+      },
+      "viewport": {
+        "x": 0,
+        "y": 0,
+        "zoom": 1.0
+      }
+    }
+  ]
+}

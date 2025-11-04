@@ -1,0 +1,599 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Simple Sequential Workflow Schema",
+  "description": "Simple JSON schema for workflows with sequential execution array",
+  "type": "object",
+  "required": ["workflow", "steps"],
+  "properties": {
+    "workflow": {
+      "type": "object",
+      "description": "Workflow metadata",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Workflow name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Workflow description",
+          "maxLength": 500
+        },
+        "version": {
+          "type": "string",
+          "description": "Workflow version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "author": {
+          "type": "string",
+          "description": "Workflow author",
+          "maxLength": 100
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation date"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Workflow tags",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "maxItems": 10
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "description": "Sequential workflow steps",
+      "items": {
+        "$ref": "#/definitions/step"
+      },
+      "minItems": 1
+    },
+    "resources": {
+      "type": "object",
+      "description": "External resources referenced by steps",
+      "properties": {
+        "todoLists": {
+          "type": "object",
+          "description": "Todo list definitions",
+          "patternProperties": {
+            "^[a-zA-Z0-9_-]+$": {
+              "$ref": "#/definitions/todoList"
+            }
+          }
+        },
+        "messageBuses": {
+          "type": "object",
+          "description": "Message bus definitions",
+          "patternProperties": {
+            "^[a-zA-Z0-9_-]+$": {
+              "$ref": "#/definitions/messageBus"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "step": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Step type",
+          "enum": [
+            "task",
+            "parallel",
+            "sequential",
+            "loop",
+            "if",
+            "message",
+            "wait",
+            "merge"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "description": "Step name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Step description",
+          "maxLength": 500
+        },
+        "config": {
+          "type": "object",
+          "description": "Step-specific configuration",
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "task" }
+                }
+              },
+              "then": { "$ref": "#/definitions/taskConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "parallel" }
+                }
+              },
+              "then": { "$ref": "#/definitions/parallelConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "sequential" }
+                }
+              },
+              "then": { "$ref": "#/definitions/sequentialConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "loop" }
+                }
+              },
+              "then": { "$ref": "#/definitions/loopConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "if" }
+                }
+              },
+              "then": { "$ref": "#/definitions/ifConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "message" }
+                }
+              },
+              "then": { "$ref": "#/definitions/messageConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "wait" }
+                }
+              },
+              "then": { "$ref": "#/definitions/waitConfig" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "merge" }
+                }
+              },
+              "then": { "$ref": "#/definitions/mergeConfig" }
+            }
+          ]
+        },
+        "onSuccess": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Next step to execute on success"
+            },
+            {
+              "type": "array",
+              "description": "Next steps to execute on success",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "onFailure": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Next step to execute on failure"
+            },
+            {
+              "type": "array",
+              "description": "Next steps to execute on failure",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "taskConfig": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Task action to perform",
+          "minLength": 1
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "default": "medium"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Estimated duration in hours",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "assignee": {
+          "type": "string",
+          "description": "Task assignee",
+          "maxLength": 100
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Task input parameters",
+          "additionalProperties": true
+        }
+      }
+    },
+    "parallelConfig": {
+      "type": "object",
+      "required": ["tasks"],
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "description": "Tasks to execute in parallel",
+          "items": {
+            "$ref": "#/definitions/step"
+          },
+          "minItems": 1
+        },
+        "waitAll": {
+          "type": "boolean",
+          "description": "Wait for all tasks to complete",
+          "default": true
+        },
+        "maxConcurrency": {
+          "type": "integer",
+          "description": "Maximum concurrent tasks",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      }
+    },
+    "sequentialConfig": {
+      "type": "object",
+      "required": ["tasks"],
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "description": "Tasks to execute sequentially",
+          "items": {
+            "$ref": "#/definitions/step"
+          },
+          "minItems": 1
+        },
+        "continueOnError": {
+          "type": "boolean",
+          "description": "Continue on task failure",
+          "default": false
+        }
+      }
+    },
+    "loopConfig": {
+      "type": "object",
+      "required": ["task"],
+      "properties": {
+        "task": {
+          "$ref": "#/definitions/step"
+        },
+        "todoList": {
+          "type": "string",
+          "description": "Todo list ID to iterate over"
+        },
+        "maxIterations": {
+          "type": "integer",
+          "description": "Maximum iterations",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "stopOnFailure": {
+          "type": "boolean",
+          "description": "Stop loop on task failure",
+          "default": true
+        }
+      }
+    },
+    "ifConfig": {
+      "type": "object",
+      "required": ["condition"],
+      "properties": {
+        "condition": {
+          "type": "string",
+          "description": "Condition to evaluate",
+          "minLength": 1
+        },
+        "then": {
+          "$ref": "#/definitions/step"
+        },
+        "else": {
+          "$ref": "#/definitions/step"
+        }
+      }
+    },
+    "messageConfig": {
+      "type": "object",
+      "required": ["bus"],
+      "properties": {
+        "bus": {
+          "type": "string",
+          "description": "Message bus ID"
+        },
+        "type": {
+          "type": "string",
+          "description": "Message type"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["send", "receive"],
+          "default": "send"
+        },
+        "data": {
+          "type": "object",
+          "description": "Message data",
+          "additionalProperties": true
+        }
+      }
+    },
+    "waitConfig": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Wait duration in seconds",
+          "minimum": 0
+        },
+        "until": {
+          "type": "string",
+          "description": "Wait until condition is met"
+        },
+        "checkInterval": {
+          "type": "number",
+          "description": "Check interval in seconds",
+          "minimum": 1,
+          "default": 5
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["duration"]
+        },
+        {
+          "required": ["until"]
+        }
+      ]
+    },
+    "mergeConfig": {
+      "type": "object",
+      "properties": {
+        "waitAll": {
+          "type": "boolean",
+          "description": "Wait for all inputs",
+          "default": true
+        },
+        "timeout": {
+          "type": "number",
+          "description": "Timeout in seconds",
+          "minimum": 1
+        }
+      }
+    },
+    "todoList": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Todo list name",
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "description": "Todo items",
+          "items": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Item text",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "completed": {
+                "type": "boolean",
+                "default": false
+              },
+              "priority": {
+                "type": "string",
+                "enum": ["low", "medium", "high"],
+                "default": "medium"
+              }
+            }
+          }
+        }
+      }
+    },
+    "messageBus": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Message bus name",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["sender", "receiver"],
+          "default": "sender"
+        },
+        "messageTypes": {
+          "type": "array",
+          "description": "Supported message types",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "workflow": {
+        "name": "Simple Order Processing",
+        "description": "Process orders sequentially with validation and payment",
+        "version": "1.0.0",
+        "author": "Workflow Team",
+        "created": "2024-01-15T10:00:00Z",
+        "tags": ["order", "payment", "processing"]
+      },
+      "steps": [
+        {
+          "type": "task",
+          "name": "Validate Order",
+          "description": "Validate order data and check for completeness",
+          "config": {
+            "action": "validateOrder",
+            "priority": "high",
+            "inputs": {
+              "orderId": "{{order.id}}",
+              "customerId": "{{order.customerId}}"
+            }
+          }
+        },
+        {
+          "type": "if",
+          "name": "Check Inventory",
+          "description": "Verify inventory availability",
+          "config": {
+            "condition": "Proceed only if the condition is met: All items are in stock",
+            "then": {
+              "type": "parallel",
+              "name": "Process Payment",
+              "config": {
+                "tasks": [
+                  {
+                    "type": "task",
+                    "name": "Charge Payment",
+                    "config": {
+                      "action": "processPayment",
+                      "priority": "high"
+                    }
+                  },
+                  {
+                    "type": "task",
+                    "name": "Reserve Inventory",
+                    "config": {
+                      "action": "reserveInventory",
+                      "priority": "medium"
+                    }
+                  }
+                ]
+              },
+              "else": {
+                "type": "message",
+                "name": "Notify Out of Stock",
+                "config": {
+                  "bus": "notification-service",
+                  "type": "out-of-stock",
+                  "data": {
+                    "orderId": "{{order.id}}",
+                    "items": "{{order.items}}"
+                  }
+                }
+              }
+            }
+          },
+        {
+          "type": "loop",
+          "name": "Fulfill Order Items",
+          "description": "Process each item in the order",
+          "config": {
+            "todoList": "order-items",
+            "task": {
+              "type": "sequential",
+              "name": "Process Single Item",
+              "config": {
+                "tasks": [
+                  {
+                    "type": "task",
+                    "name": "Pick Item",
+                    "config": {
+                      "action": "pickItem",
+                      "inputs": {
+                        "itemId": "{{item.id}}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "task",
+                    "name": "Package Item",
+                    "config": {
+                      "action": "packageItem"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "message",
+          "name": "Send Confirmation",
+          "description": "Send order confirmation to customer",
+          "config": {
+            "bus": "notification-service",
+            "type": "order-confirmation",
+            "data": {
+              "orderId": "{{order.id}}",
+              "customerEmail": "{{order.customerEmail}}"
+            }
+          }
+        }
+      ],
+      "resources": {
+        "todoLists": {
+          "order-items": {
+            "name": "Order Items",
+            "items": [
+              {
+                "text": "Process item SKU-001",
+                "priority": "high"
+              },
+              {
+                "text": "Process item SKU-002",
+                "priority": "medium"
+              }
+            ]
+          }
+        },
+        "messageBuses": {
+          "notification-service": {
+            "name": "Notification Service",
+            "mode": "sender",
+            "messageTypes": ["order-confirmation", "out-of-stock", "shipping-update"]
+          }
+        }
+      }
+    }
+  ]
+}
