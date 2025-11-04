@@ -1,0 +1,663 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Workflow Import Schema",
+  "description": "JSON schema for importing workflows into the TaskFlow system",
+  "type": "object",
+  "required": ["workflow", "nodes", "connections"],
+  "properties": {
+    "workflow": {
+      "type": "object",
+      "description": "Workflow metadata and configuration",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Workflow name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Workflow description",
+          "maxLength": 500
+        },
+        "version": {
+          "type": "string",
+          "description": "Workflow version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "author": {
+          "type": "string",
+          "description": "Workflow author",
+          "maxLength": 100
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Workflow creation date"
+        },
+        "modified": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification date"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Workflow tags",
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "maxItems": 10
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "description": "Array of workflow nodes",
+      "items": {
+        "$ref": "#/definitions/node"
+      },
+      "minItems": 1
+    },
+    "connections": {
+      "type": "array",
+      "description": "Array of node connections",
+      "items": {
+        "$ref": "#/definitions/connection"
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "description": "Canvas viewport configuration",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "Viewport X position"
+        },
+        "y": {
+          "type": "number",
+          "description": "Viewport Y position"
+        },
+        "zoom": {
+          "type": "number",
+          "description": "Zoom level",
+          "minimum": 0.1,
+          "maximum": 2.0
+        }
+      }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "position"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique node identifier",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Node type",
+          "enum": [
+            "task",
+            "parallel",
+            "sequential",
+            "independent",
+            "merge",
+            "todolist",
+            "messagebus",
+            "loop",
+            "ifcondition"
+          ]
+        },
+        "position": {
+          "type": "object",
+          "description": "Node position on canvas",
+          "required": ["x", "y"],
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X coordinate"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y coordinate"
+            }
+          }
+        },
+        "data": {
+          "type": "object",
+          "description": "Node-specific data",
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "task" }
+                }
+              },
+              "then": { "$ref": "#/definitions/taskNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "parallel" }
+                }
+              },
+              "then": { "$ref": "#/definitions/parallelNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "sequential" }
+                }
+              },
+              "then": { "$ref": "#/definitions/sequentialNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "independent" }
+                }
+              },
+              "then": { "$ref": "#/definitions/independentNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "merge" }
+                }
+              },
+              "then": { "$ref": "#/definitions/mergeNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "todolist" }
+                }
+              },
+              "then": { "$ref": "#/definitions/todoListNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "messagebus" }
+                }
+              },
+              "then": { "$ref": "#/definitions/messageBusNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "loop" }
+                }
+              },
+              "then": { "$ref": "#/definitions/loopNodeData" }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": { "const": "ifcondition" }
+                }
+              },
+              "then": { "$ref": "#/definitions/ifConditionNodeData" }
+            }
+          ]
+        },
+        "selected": {
+          "type": "boolean",
+          "description": "Whether the node is selected",
+          "default": false
+        },
+        "dragging": {
+          "type": "boolean",
+          "description": "Whether the node is being dragged",
+          "default": false
+        }
+      }
+    },
+    "taskNodeData": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Task name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description",
+          "maxLength": 500
+        },
+        "priority": {
+          "type": "string",
+          "description": "Task priority",
+          "enum": ["low", "medium", "high"],
+          "default": "medium"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Estimated duration in hours",
+          "minimum": 0,
+          "maximum": 999
+        }
+      }
+    },
+    "parallelNodeData": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Node label",
+          "default": "Parallel Task",
+          "maxLength": 50
+        }
+      }
+    },
+    "sequentialNodeData": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Node label",
+          "default": "Sequential Tasks",
+          "maxLength": 50
+        },
+        "isExpanded": {
+          "type": "boolean",
+          "description": "Whether the node is expanded",
+          "default": false
+        }
+      }
+    },
+    "independentNodeData": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Node label",
+          "default": "Independent Tasks",
+          "maxLength": 50
+        },
+        "isExpanded": {
+          "type": "boolean",
+          "description": "Whether the node is expanded",
+          "default": false
+        }
+      }
+    },
+    "mergeNodeData": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Node label",
+          "default": "Aggregator",
+          "maxLength": 50
+        }
+      }
+    },
+    "todoListNodeData": {
+      "type": "object",
+      "required": ["label", "todoListId", "todoCount"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Todo list name",
+          "maxLength": 100
+        },
+        "todoListId": {
+          "type": "string",
+          "description": "Unique todo list identifier",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "todoCount": {
+          "type": "integer",
+          "description": "Total number of tasks",
+          "minimum": 0,
+          "maximum": 9999
+        },
+        "completedCount": {
+          "type": "integer",
+          "description": "Number of completed tasks",
+          "minimum": 0,
+          "maximum": 9999
+        }
+      }
+    },
+    "messageBusNodeData": {
+      "type": "object",
+      "required": ["label", "messageBusId", "mode"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Message bus name",
+          "maxLength": 100
+        },
+        "messageBusId": {
+          "type": "string",
+          "description": "Unique message bus identifier",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "mode": {
+          "type": "string",
+          "description": "Message bus mode",
+          "enum": ["sender", "receiver"],
+          "default": "sender"
+        }
+      }
+    },
+    "loopNodeData": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Loop name",
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "description": "Loop status",
+          "enum": ["ready", "running", "completed"],
+          "default": "ready"
+        },
+        "currentIteration": {
+          "type": "integer",
+          "description": "Current iteration count",
+          "minimum": 0,
+          "default": 0
+        },
+        "totalIterations": {
+          "type": "integer",
+          "description": "Total iterations",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "ifConditionNodeData": {
+      "type": "object",
+      "required": ["label", "prompt"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Condition name",
+          "maxLength": 100
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Condition prompt starting with 'Proceed only if the condition is met: '",
+          "minLength": 10,
+          "maxLength": 1000
+        },
+        "isEvaluated": {
+          "type": "boolean",
+          "description": "Whether condition has been evaluated",
+          "default": false
+        },
+        "result": {
+          "type": ["boolean", "null"],
+          "description": "Condition evaluation result",
+          "default": null
+        }
+      }
+    },
+    "connection": {
+      "type": "object",
+      "required": ["id", "source", "target", "sourceHandle", "targetHandle"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique connection identifier",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source node ID"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target node ID"
+        },
+        "sourceHandle": {
+          "type": "string",
+          "description": "Source handle identifier",
+          "enum": ["output", "true", "false", "task", "completed", "trigger", "todolist"]
+        },
+        "targetHandle": {
+          "type": "string",
+          "description": "Target handle identifier",
+          "enum": ["input", "trigger", "todolist", "task", "completed"]
+        },
+        "animated": {
+          "type": "boolean",
+          "description": "Whether connection shows animation",
+          "default": false
+        },
+        "style": {
+          "type": "object",
+          "description": "Connection styling",
+          "properties": {
+            "stroke": {
+              "type": "string",
+              "description": "Stroke color",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "strokeWidth": {
+              "type": "integer",
+              "description": "Stroke width",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "strokeDasharray": {
+              "type": "string",
+              "description": "Dash pattern",
+              "pattern": "^\\d+( \\d+)*$"
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "workflow": {
+        "name": "Sample Task Processing Workflow",
+        "description": "A workflow that processes tasks in parallel and aggregates results",
+        "version": "1.0.0",
+        "author": "John Doe",
+        "created": "2024-01-15T10:00:00Z",
+        "modified": "2024-01-15T10:00:00Z",
+        "tags": ["processing", "parallel", "automation"]
+      },
+      "nodes": [
+        {
+          "id": "task-1",
+          "type": "task",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "label": "Start Processing",
+            "description": "Initialize task processing",
+            "priority": "high",
+            "duration": 0.5
+          }
+        },
+        {
+          "id": "todo-1",
+          "type": "todolist",
+          "position": { "x": 300, "y": 50 },
+          "data": {
+            "label": "Main Tasks",
+            "todoListId": "tasks-001",
+            "todoCount": 10,
+            "completedCount": 0
+          }
+        },
+        {
+          "id": "loop-1",
+          "type": "loop",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "label": "Process Each Task",
+            "status": "ready"
+          }
+        },
+        {
+          "id": "parallel-1",
+          "type": "parallel",
+          "position": { "x": 700, "y": 100 },
+          "data": {
+            "label": "Parallel Processing"
+          }
+        },
+        {
+          "id": "task-2",
+          "type": "task",
+          "position": { "x": 900, "y": 50 },
+          "data": {
+            "label": "Validate Data",
+            "priority": "medium",
+            "duration": 1
+          }
+        },
+        {
+          "id": "task-3",
+          "type": "task",
+          "position": { "x": 900, "y": 150 },
+          "data": {
+            "label": "Transform Data",
+            "priority": "medium",
+            "duration": 2
+          }
+        },
+        {
+          "id": "merge-1",
+          "type": "merge",
+          "position": { "x": 1100, "y": 100 },
+          "data": {
+            "label": "Aggregator"
+          }
+        },
+        {
+          "id": "if-1",
+          "type": "ifcondition",
+          "position": { "x": 1300, "y": 100 },
+          "data": {
+            "label": "Quality Check",
+            "prompt": "Proceed only if the condition is met: All validation checks pass and data quality is acceptable",
+            "isEvaluated": false,
+            "result": null
+          }
+        },
+        {
+          "id": "messagebus-1",
+          "type": "messagebus",
+          "position": { "x": 1500, "y": 100 },
+          "data": {
+            "label": "Notification Service",
+            "messageBusId": "notify-001",
+            "mode": "sender"
+          }
+        },
+        {
+          "id": "task-4",
+          "type": "task",
+          "position": { "x": 1700, "y": 100 },
+          "data": {
+            "label": "Send Results",
+            "priority": "low",
+            "duration": 0.5
+          }
+        }
+      ],
+      "connections": [
+        {
+          "id": "conn-1",
+          "source": "task-1",
+          "target": "todo-1",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-2",
+          "source": "todo-1",
+          "target": "loop-1",
+          "sourceHandle": "output",
+          "targetHandle": "todolist"
+        },
+        {
+          "id": "conn-3",
+          "source": "loop-1",
+          "target": "parallel-1",
+          "sourceHandle": "task",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-4",
+          "source": "parallel-1",
+          "target": "task-2",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-5",
+          "source": "parallel-1",
+          "target": "task-3",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-6",
+          "source": "task-2",
+          "target": "merge-1",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-7",
+          "source": "task-3",
+          "target": "merge-1",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-8",
+          "source": "merge-1",
+          "target": "if-1",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-9",
+          "source": "if-1",
+          "target": "messagebus-1",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        },
+        {
+          "id": "conn-10",
+          "source": "messagebus-1",
+          "target": "task-4",
+          "sourceHandle": "output",
+          "targetHandle": "input"
+        }
+      ],
+      "viewport": {
+        "x": 0,
+        "y": 0,
+        "zoom": 1.0
+      }
+    }
+  ]
+}

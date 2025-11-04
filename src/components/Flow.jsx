@@ -58,7 +58,7 @@ const Flow = () => {
   );
 
   const onNodeClick = useCallback((event, node) => {
-    if (node.type === 'task' || node.type === 'todolist' || node.type === 'messagebus' || node.type === 'loop') {
+    if (node.type === 'task' || node.type === 'todolist' || node.type === 'messagebus' || node.type === 'loop' || node.type === 'ifcondition') {
       setSelectedNode(node);
     }
   }, []);
@@ -551,6 +551,67 @@ const Flow = () => {
               <circle cx="12" cy="10" r="0.5" fill="currentColor" />
             </svg>
           </div>
+
+          {/* If Condition */}
+          <div
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData('application/reactflow', 'ifcondition');
+              event.dataTransfer.effectAllowed = 'move';
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '30px',
+              height: '30px',
+              borderRadius: '6px',
+              border: '1px solid #d0d0d0',
+              backgroundColor: '#ffffff',
+              cursor: 'grab',
+              transition: 'all 0.2s ease',
+              position: 'relative',
+            }}
+            title="If Condition - Conditional logic"
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#f0f8ff';
+              e.target.style.borderColor = '#17a2b8';
+              e.target.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#ffffff';
+              e.target.style.borderColor = '#d0d0d0';
+              e.target.style.transform = 'scale(1)';
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Input from top */}
+              <circle cx="12" cy="4" r="1.5" />
+              <line x1="12" y1="5.5" x2="12" y2="8" />
+
+              {/* Rounded rectangle shape */}
+              <rect x="8" y="8" width="8" height="8" rx="2" />
+
+              {/* Question mark inside */}
+              <text x="12" y="14" fontSize="6" textAnchor="middle" fill="currentColor">?</text>
+
+              {/* Single output to right */}
+              <line x1="16" y1="12" x2="18.5" y2="12" />
+              <circle cx="20" cy="12" r="1.5" />
+
+              {/* Arrow indicating flow direction */}
+              <path d="M18 11 L 20 12 L 18 13" fill="none" strokeWidth="1.5" />
+            </svg>
+          </div>
         </div>
         {/* <Controls /> */}
         {/* <MiniMap /> */}
@@ -588,6 +649,7 @@ const Flow = () => {
                selectedNode.type === 'todolist' ? 'Todo List Properties' :
                selectedNode.type === 'messagebus' ? 'Message Bus Properties' :
                selectedNode.type === 'loop' ? 'Loop Properties' :
+               selectedNode.type === 'ifcondition' ? 'If Condition Properties' :
                'Node Properties'}
             </h3>
             <button
@@ -911,6 +973,149 @@ const Flow = () => {
                 }}>
                   <span>Current: {selectedNode.data.currentIteration || 0}</span>
                   <span>Total: {selectedNode.data.totalIterations || 0}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* If Condition Properties */}
+          {selectedNode.type === 'ifcondition' && (
+            <>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#555' }}>
+                  Condition Name
+                </label>
+                <input
+                  type="text"
+                  value={selectedNode.data.label || ''}
+                  onChange={(e) => updateNodeData('label', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                  placeholder="Enter condition name"
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#555' }}>
+                  Condition Prompt
+                </label>
+                <textarea
+                  value={selectedNode.data.prompt || ''}
+                  onChange={(e) => updateNodeData('prompt', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    minHeight: '80px',
+                    resize: 'vertical',
+                  }}
+                  placeholder="Describe the condition that must be met to proceed..."
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px', fontSize: '12px', color: '#666', padding: '8px', background: '#f8f9fa', borderRadius: '4px' }}>
+                <strong>Prompt Format:</strong><br/>
+                Start your prompt with: <em>"Proceed only if the condition is met: "</em><br/><br/>
+                <strong>Examples:</strong><br/>
+                • Proceed only if the condition is met: User is authenticated and has admin privileges<br/>
+                • Proceed only if the condition is met: File size is less than 10MB and format is PDF<br/>
+                • Proceed only if the condition is met: Current time is between 9 AM and 5 PM on weekdays<br/>
+                • Proceed only if the condition is met: Inventory count is above minimum threshold
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#555' }}>
+                  Test Condition
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      // Simulate condition evaluation (in a real app, this would call an AI/agent)
+                      if (selectedNode.data.prompt && selectedNode.data.prompt.trim()) {
+                        // For demo purposes, we'll simulate a random evaluation
+                        // In reality, this would evaluate the prompt using an AI/agent
+                        const simulatedResult = Math.random() > 0.3; // 70% chance of true for demo
+                        updateNodeData('result', simulatedResult);
+                        updateNodeData('isEvaluated', true);
+                      }
+                    }}
+                    disabled={!selectedNode.data.prompt || !selectedNode.data.prompt.trim()}
+                    style={{
+                      flex: 1,
+                      padding: '6px',
+                      background: (!selectedNode.data.prompt || !selectedNode.data.prompt.trim()) ? '#6c757d' : '#17a2b8',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: (!selectedNode.data.prompt || !selectedNode.data.prompt.trim()) ? 'not-allowed' : 'pointer',
+                      fontSize: '11px',
+                    }}
+                  >
+                    Test Condition
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateNodeData('isEvaluated', false);
+                      updateNodeData('result', null);
+                    }}
+                    disabled={!selectedNode.data.isEvaluated}
+                    style={{
+                      flex: 1,
+                      padding: '6px',
+                      background: !selectedNode.data.isEvaluated ? '#6c757d' : '#ffc107',
+                      color: !selectedNode.data.isEvaluated ? '#fff' : '#000',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: !selectedNode.data.isEvaluated ? 'not-allowed' : 'pointer',
+                      fontSize: '11px',
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                  Note: This simulates condition evaluation. In production, an AI agent would evaluate the prompt.
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#555' }}>
+                  Current Status
+                </label>
+                <div style={{
+                  padding: '8px',
+                  background: selectedNode.data.isEvaluated ?
+                    (selectedNode.data.result ? '#d4edda' : '#f8d7da') : '#e7f3ff',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: selectedNode.data.isEvaluated ?
+                    (selectedNode.data.result ? '#155724' : '#721c24') : '#0c5460',
+                  textAlign: 'center',
+                  border: `1px solid ${selectedNode.data.isEvaluated ?
+                    (selectedNode.data.result ? '#c3e6cb' : '#f5c6cb') : '#b3d7ff'}`
+                }}>
+                  {selectedNode.data.isEvaluated ?
+                    (selectedNode.data.result ? '✅ PROCEED - Condition met' : '❌ STOP - Condition not met') :
+                    '🔍 NOT TESTED - Test condition to determine flow'}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#555' }}>
+                  Flow Behavior
+                </label>
+                <div style={{ textAlign: 'center', padding: '8px', background: '#f8f9fa', borderRadius: '4px', fontSize: '11px', color: '#666' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>AI-Powered Gate</div>
+                  <div>• Condition met → Flow continues through output</div>
+                  <div>• Condition not met → Flow stops at this node</div>
+                  <div>• AI evaluates natural language condition prompt</div>
                 </div>
               </div>
             </>

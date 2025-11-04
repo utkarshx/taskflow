@@ -6,6 +6,7 @@ import AggregatorNode from '../components/nodes/AggregatorNode';
 import TodoListNode from '../components/nodes/TodoListNode';
 import MessageBusNode from '../components/nodes/MessageBusNode';
 import TaskExecutionNode from '../components/nodes/TaskExecutionNode';
+import IfConditionNode from '../components/nodes/IfConditionNode';
 
 // Define node types mapping
 export const nodeTypes = {
@@ -17,6 +18,7 @@ export const nodeTypes = {
   todolist: TodoListNode,
   messagebus: MessageBusNode,
   loop: TaskExecutionNode,
+  ifcondition: IfConditionNode,
 };
 
 // Function to get label for node type
@@ -38,6 +40,8 @@ export const getLabelForType = (type) => {
       return 'Message Bus';
     case 'loop':
       return 'Loop';
+    case 'ifcondition':
+      return 'If Condition';
     default:
       return `${type} node`;
   }
